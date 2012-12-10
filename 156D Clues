@@ -1,0 +1,62 @@
+#include <cstdio>
+#include <vector>
+
+using namespace std;
+
+const int MaxN = 100005;
+
+vector<int> G[MaxN];
+int N, C, Size[MaxN], Solution, Mod;
+bool Visited[MaxN];
+
+void DFS(int X) {
+    Visited[X] = true, ++Size[C];
+    for (vector<int>::iterator Y = G[X].begin(); Y != G[X].end(); ++Y)
+        if (!Visited[*Y])
+            DFS(*Y);
+}
+
+void BuildComponents() {
+    for (int X = 1; X <= N; ++X) {
+        if (!Visited[X]) {
+            ++C; DFS(X);
+        }
+    }
+}
+
+inline int Pow(int X, int P) {
+    if (P == 0)
+        return 1;
+    if (P % 2)
+        return (1LL * X * Pow(X, P - 1)) % Mod;
+    return Pow((1LL * X * X) % Mod, P / 2);
+}
+
+void Solve() {
+    BuildComponents();
+    if (C == 1) {
+        Solution = 1 % Mod; return;
+    }
+    Solution = Pow(N, C - 2);
+    for (int c = 1; c <= C; ++c)
+        Solution = (1LL * Solution * Size[c]) % Mod;
+}
+
+void Read() {
+    int E; scanf("%d %d %d", &N, &E, &Mod);
+    for (; E; --E) {
+        int X, Y; scanf("%d %d", &X, &Y);
+        G[X].push_back(Y), G[Y].push_back(X);
+    }
+}
+
+void Print() {
+    printf("%d\n", Solution);
+}
+
+int main() {
+    Read();
+    Solve();
+    Print();
+    return 0;
+}
