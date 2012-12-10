@@ -1,0 +1,173 @@
+#include <iostream>
+#include <algorithm>
+#include <string>
+#include <cstring>
+
+using namespace std;
+
+typedef long long LL;
+
+const int MaxN = 500005;
+const int MaxLog = 19;
+
+struct Suffix {
+    int p, s[2], string;
+
+    inline bool operator< (const Suffix &suffix) const {
+        if (s[0] == suffix.s[0])
+            return s[1] < suffix.s[1];
+        return s[0] < suffix.s[0];
+    }
+
+    inline bool operator== (const Suffix &suffix) const {
+        return (s[0] == suffix.s[0] && s[1] == suffix.s[1]);
+    }
+};
+
+Suffix SuffixArray[MaxN];
+int M, N, K, Log[MaxN], P[MaxLog][MaxN], PrefixArray[MaxLog][MaxN], Null;
+int Hash[MaxN], Right[MaxN];
+LL Solution[MaxN];
+string String;
+
+inline int LCP(int X, int Y) {
+    int Prefix = 0;
+    for (int Step = Log[N]; Step >= 0 && X <= N && Y <= N; --Step)
+        if (P[Step][X] == P[Step][Y])
+            Prefix += (1<<Step), X += (1<<Step), Y += (1<<Step);
+    return Prefix;
+}
+
+void BuildLog() {
+    for (int i = 2; i <= N + 1; ++i)
+        Log[i] = Log[i / 2] + 1;
+}
+
+void BuildSuffixArray() {
+    BuildLog();
+    for (int Step = 1; Step <= Log[N] + 1; ++Step) {
+        for (int i = 1; i <= N; ++i) {
+            SuffixArray[i].s[0] = P[Step - 1][SuffixArray[i].p];
+            if (SuffixArray[i].p + (1<<(Step - 1)) <= N)
+                SuffixArray[i].s[1] = P[Step - 1][SuffixArray[i].p + (1<<(Step - 1))];
+            else
+                SuffixArray[i].s[1] = Null;
+        }
+        sort(SuffixArray+1, SuffixArray + N + 1);
+        for (int i = 1; i <= N; ++i)
+            if (i > 1 && SuffixArray[i - 1] == SuffixArray[i])
+                P[Step][SuffixArray[i].p] = P[Step][SuffixArray[i - 1].p];
+            else
+                P[Step][SuffixArray[i].p] = i;
+    }
+}
+
+inline int GetPrefix(int X, int Y) {
+    if (X == Y)
+        return N;
+    if (Y > N)
+        return 0;
+    --Y;
+    if (X > Y)
+        swap(X, Y);
+    return min(PrefixArray[Log[Y - X + 1]][X], PrefixArray[Log[Y - X + 1]][Y - (1<<Log[Y - X + 1]) + 1]);
+}
+
+void BuildPrefixArray() {
+    for (int i = 1; i < N; ++i)
+        PrefixArray[0][i] = LCP(SuffixArray[i].p, SuffixArray[i+1].p);
+    for (int Step = 1; Step <= Log[N]; ++Step)
+        for (int i = 1; i + (1<<Step) - 1 <= N; ++i)
+            PrefixArray[Step][i] = min(PrefixArray[Step - 1][i], PrefixArray[Step - 1][i + (1<<(Step - 1))]);
+}
+
+inline void InsertString(int StringIndex, int &Frequence) {
+    if (StringIndex == 0)
+        return;
+    Frequence += (Hash[StringIndex] == 0);
+    ++Hash[StringIndex];
+}
+
+inline void EraseString(int StringIndex, int &Frequence) {
+    if (StringIndex == 0)
+        return;
+    --Hash[StringIndex];
+    Frequence -= (Hash[StringIndex] == 0);
+}
+
+void BuildRight() {
+    for (int L = 1, R = 1, Frequence = 0; L <= N; ++L) {
+        EraseString(SuffixArray[L-1].string, Frequence);
+        for (; R <= N && Frequence < K; ++R)
+            InsertString(SuffixArray[R].string, Frequence);
+        Right[L] = (Frequence >= K ? R - 1 : N + 1);
+    }
+}
+
+int SearchLeft(int i, int Length) {
+    int L = 1, R = i, Left = i;
+    while (L <= R) {
+        int Mid = (L + R) / 2;
+        if (GetPrefix(Mid, i) >= Length)
+            Left = Mid, R = Mid - 1;
+        else
+            L = Mid + 1;
+    }
+    return Left;
+}
+
+int SearchPrefix(int i) {
+    int L = 1, R = N, Length = 0;
+    while (L <= R) {
+        int Mid = (L + R) / 2;
+        int Left = SearchLeft(i, Mid);
+        if (GetPrefix(i, max(i, Right[Left])) >= Mid)
+            Length = Mid, L = Mid + 1;
+        else
+            R = Mid - 1;
+    }
+    return Length;
+}
+
+void Solve() {
+    if (K == 1)
+        return;
+    BuildSuffixArray();
+    BuildPrefixArray();
+    BuildRight();
+    for (int i = 1; i <= N; ++i)
+        if (SuffixArray[i].string != 0)
+            Solution[SuffixArray[i].string] += SearchPrefix(i);
+}
+
+void Read() {
+    cin >> M >> K;
+    Null = -M;
+    for (int i = 1; i <= M; ++i) {
+        string A; cin >> A;
+        if (K == 1) {
+            Solution[i] = 1LL * A.length() * (A.length() + 1) / 2;
+            continue;
+        }
+        for (unsigned j = 0; j < A.length(); ++j) {
+            ++N;
+            P[0][N] = A[j], SuffixArray[N].p = N, SuffixArray[N].string = i;
+        }
+        ++N;
+        P[0][N] = ++Null, SuffixArray[N].p = N, SuffixArray[N].string = 0;
+    }
+    Null = -M;
+}
+
+void Print() {
+    for (int i = 1; i <= M; ++i)
+        cout << Solution[i] << " ";
+    cout << "\n";
+}
+
+int main() {
+    Read();
+    Solve();
+    Print();
+    return 0;
+}
