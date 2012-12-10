@@ -1,0 +1,74 @@
+#include <cstdio>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+const int MaxN = 100005;
+
+vector<int> Position[MaxN], Q[MaxN];
+int N, M, V[MaxN], Index[MaxN], BIT[MaxN];
+int Left[MaxN], Right[MaxN], Answer[MaxN];
+
+inline int LSB(int x) {
+    return x&(-x);
+}
+
+inline void Update(int Pos, int Val) {
+    for (; Pos <= N+1; Pos += LSB(Pos))
+        BIT[Pos] += Val;
+}
+
+inline int Query(int Pos) {
+    int Sum = 0;
+    for (; Pos > 0; Pos -= LSB(Pos))
+        Sum += BIT[Pos];
+    return Sum;
+}
+
+void Solve() {
+    for (int i = 1; i <= N; ++i) {
+        if (V[i] <= N) {
+            ++Index[V[i]];
+            if (Index[V[i]] == V[i]) {
+                Update(Position[V[i]][0] + 1, 1), Update(Position[V[i]][1] + 1, -1);
+            }
+            else if (Index[V[i]] >= V[i]) {
+                Update(Position[V[i]][Index[V[i]]-V[i] - 1] + 1, -1);
+                Update(Position[V[i]][Index[V[i]]-V[i]] + 1, 2);
+                Update(Position[V[i]][Index[V[i]]-V[i] + 1] + 1, -1);
+            }
+        }
+        for (vector<int>::iterator q = Q[i].begin(); q != Q[i].end(); ++q)
+            Answer[*q] = Query(Left[*q]);
+    }
+}
+
+void Read() {
+    scanf("%d %d", &N, &M);
+    for (int i = 1; i <= N; ++i)
+        Position[i].push_back(0);
+    for (int i = 1; i <= N; ++i) {
+        scanf("%d", &V[i]);
+        if (V[i] <= N)
+            Position[V[i]].push_back(i);
+    }
+    for (int i = 1; i <= N; ++i)
+        Position[i].push_back(N + 1);
+    for (int i = 1; i <= M; ++i) {
+        scanf("%d %d", &Left[i], &Right[i]);
+        Q[Right[i]].push_back(i);
+    }
+}
+
+void Print() {
+    for (int i = 1; i <= M; ++i)
+        printf("%d\n", Answer[i]);
+}
+
+int main() {
+    Read();
+    Solve();
+    Print();
+    return 0;
+}
