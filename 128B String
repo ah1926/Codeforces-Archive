@@ -1,0 +1,130 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <stack>
+#include <cassert>
+
+using namespace std;
+
+typedef long long LL;
+
+const int MaxN = 100005;
+const int MaxLog = 18;
+
+int N, K;
+char String[MaxN], Sol[MaxN];
+
+struct Suffix {
+    int s[2], p;
+
+    inline bool operator< (const Suffix &suffix) const {
+        if (s[0] == suffix.s[0])
+            return s[1] < suffix.s[1];
+        return s[0] < suffix.s[0];
+    }
+
+    inline bool operator== (const Suffix &suffix) const {
+        return (s[0] == suffix.s[0] && s[1] == suffix.s[1]);
+    }
+
+    inline int Length() const {
+        return N - p + 1;
+    }
+
+    inline char GetChar(int Pos) const {
+        if (p + Pos - 1 > N)
+            return '\0';
+        return String[p + Pos - 1];
+    }
+};
+
+Suffix S[MaxN];
+int P[MaxLog][MaxN], Log[MaxN], Preffix[MaxN];
+LL DP[MaxN];
+
+inline int LCP(int X, int Y) {
+    int R = 0;
+    for (int Step = Log[N]; Step >= 0 && X <= N && Y <= N; --Step)
+        if (P[Step][X] == P[Step][Y])
+            R += (1<<Step), X += (1<<Step), Y += (1<<Step);
+    return R;
+}
+
+void InitSArray() {
+    for (int i = 1; i <= N; ++i)
+        S[i].p = i, P[0][i] = String[i] - 'a' + 1;
+    for (int i = 2; i <= N; ++i)
+        Log[i] = Log[i / 2] + 1;
+}
+
+void BuildSArray() {
+    InitSArray();
+    for (int Step = 1; Step <= Log[N] + 1; ++Step) {
+        for (int i = 1; i <= N; ++i) {
+            S[i].s[0] = P[Step - 1][S[i].p];
+            if (S[i].p + (1<<(Step - 1)) <= N)
+                S[i].s[1] = P[Step - 1][S[i].p + (1<<(Step - 1))];
+            else
+                S[i].s[1] = -1;
+        }
+        sort(S + 1, S + N + 1);
+        for (int i = 1; i <= N; ++i)
+            if (i > 1 && S[i] == S[i - 1])
+                P[Step][S[i].p] = P[Step][S[i - 1].p];
+            else
+                P[Step][S[i].p] = i;
+    }
+}
+
+void BuildPreffix() {
+    for (int i = 1; i < N; ++i)
+        Preffix[i] = LCP(S[i].p, S[i + 1].p);
+}
+
+void BuildDP() {
+    stack<int> Stack;
+    Stack.push(N);
+    for (int i = N - 1; i > 0; --i) {
+        for (; !Stack.empty() && Preffix[Stack.top()] > Preffix[i]; Stack.pop());
+        DP[i] = 1LL * Preffix[i] * (Stack.top() - i) + DP[Stack.top()];
+        Stack.push(i);
+    }
+}
+
+void BuildSol() {
+    int l, r = N;
+    for (l = 1; l <= N && S[l].Length()+DP[l] < K; ++l)
+        K -= S[l].Length();
+    for (int Len = 1; K > 0; ++Len) {
+        for (; r > l && LCP(S[l].p, S[r].p) < Len; --r);
+        Sol[Len] = S[l].GetChar(Len);
+        K -= (r - l + 1);
+    }
+}
+
+void Solve() {
+    if (1LL * N * (N + 1) / 2 < K) {
+        strcpy(Sol + 1, "No such line.");
+        return;
+    }
+    BuildSArray();
+    BuildPreffix();
+    BuildDP();
+    BuildSol();
+}
+
+void Read() {
+    assert(scanf("%s\n%d", String + 1, &K) == 2);
+    N = strlen(String + 1);
+}
+
+void Print() {
+    printf("%s\n", Sol + 1);
+}
+
+int main() {
+    Read();
+    Solve();
+    Print();
+    return 0;
+}
